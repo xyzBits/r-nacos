@@ -20,15 +20,24 @@ use rnacos::web_config::app_config;
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     std::env::set_var("RUST_LOG", "actix_web=debug,actix_server=info,info");
+
+    // load .env file in the current directory
     dotenv::dotenv().ok();
+
+    // initialize the global logger
     env_logger::init();
+
+    // parse app system config from environment variable
     let sys_config = AppSysConfig::init_from_env();
     let http_addr = sys_config.get_http_addr();
     let grpc_addr = sys_config.get_grpc_addr();
     log::info!("http server addr:{}", &http_addr);
     log::info!("grpc server addr:{}", &grpc_addr);
 
+
     let config_addr = ConfigActor::new().start();
+
+
     //let naming_addr = NamingActor::new_and_create();
     let naming_addr = NamingActor::create_at_new_system();
 
