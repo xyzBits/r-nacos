@@ -32,9 +32,9 @@ fn load_web_resouce() -> anyhow::Result<()> {
         println!("down embed file");
         match get_embedded_file("dist.zip") {
             Some(content) => {
-                save_file(file_path_str,content.data.to_vec())?;
-            },
-            None => {},
+                save_file(file_path_str, content.data.to_vec())?;
+            }
+            None => {}
         }
     }
     if web_file_path.exists() {

@@ -1,5 +1,5 @@
+use super::model::{Instance, ServiceDetailDto, ServiceKey};
 use super::NamingUtils;
-use super::model::{Instance,ServiceKey, ServiceDetailDto};
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -106,41 +106,39 @@ impl InstanceVO {
     }
 }
 
-#[derive(Debug,Serialize,Deserialize,Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceQueryOptListRequest {
-    pub page_no:Option<usize>,
-    pub page_size:Option<usize>,
-    pub namespace_id:Option<String>,
-    pub group_name:Option<String>,
-    pub service_name:Option<String>,
+    pub page_no: Option<usize>,
+    pub page_size: Option<usize>,
+    pub namespace_id: Option<String>,
+    pub group_name: Option<String>,
+    pub service_name: Option<String>,
 }
 
-
-#[derive(Debug,Serialize,Deserialize,Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct ServiceInfoParam{
-    pub namespace_id:Option<String>,
-    pub group_name:Option<String>,
-    pub service_name:Option<String>,
-    pub protect_threshold:Option<f32>,
-    pub metadata:Option<String>,
-    pub selector:Option<String>,
+pub struct ServiceInfoParam {
+    pub namespace_id: Option<String>,
+    pub group_name: Option<String>,
+    pub service_name: Option<String>,
+    pub protect_threshold: Option<f32>,
+    pub metadata: Option<String>,
+    pub selector: Option<String>,
 }
 
-pub fn select_option<T>(a:Option<T>,b:Option<T>) -> Option<T>
-    where T:Clone 
+pub fn select_option<T>(a: Option<T>, b: Option<T>) -> Option<T>
+where
+    T: Clone,
 {
     match a {
-        Some(v) => {
-            Some(v)
-        },
-        None => b
+        Some(v) => Some(v),
+        None => b,
     }
 }
 
 impl ServiceInfoParam {
-    pub(crate) fn merge_value(a:Self,b:Self) -> Self {
+    pub(crate) fn merge_value(a: Self, b: Self) -> Self {
         let mut s = Self::default();
         s.namespace_id = select_option(a.namespace_id, b.namespace_id);
         s.group_name = select_option(a.group_name, b.group_name);
@@ -151,32 +149,32 @@ impl ServiceInfoParam {
         s
     }
 
-    pub(crate) fn to_service_info(self) -> anyhow::Result<ServiceDetailDto>{
+    pub(crate) fn to_service_info(self) -> anyhow::Result<ServiceDetailDto> {
         if let Some(service_name) = self.service_name {
             if service_name.is_empty() {
                 return Err(anyhow::anyhow!("service_name is vaild"));
             }
             let metadata = if let Some(metadata_str) = self.metadata {
-                match serde_json::from_str::<HashMap<String,String>>(&metadata_str) {
-                    Ok(metadata) => {
-                        Some(metadata)
-                    },
-                    Err(_) => {None}
+                match serde_json::from_str::<HashMap<String, String>>(&metadata_str) {
+                    Ok(metadata) => Some(metadata),
+                    Err(_) => None,
                 }
-            }
-            else{
+            } else {
                 None
             };
-            
+
             Ok(ServiceDetailDto {
-                namespace_id: Arc::new(NamingUtils::default_namespace(self.namespace_id.unwrap_or_default())),
+                namespace_id: Arc::new(NamingUtils::default_namespace(
+                    self.namespace_id.unwrap_or_default(),
+                )),
                 service_name: Arc::new(service_name),
-                group_name: Arc::new(NamingUtils::default_group(self.group_name.unwrap_or_default())),
+                group_name: Arc::new(NamingUtils::default_group(
+                    self.group_name.unwrap_or_default(),
+                )),
                 metadata: metadata,
                 protect_threshold: self.protect_threshold,
             })
-        }
-        else{
+        } else {
             Err(anyhow::anyhow!("service_name is empty"))
         }
     }

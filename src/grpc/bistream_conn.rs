@@ -4,8 +4,8 @@ use std::sync::Arc;
 use actix::prelude::*;
 use tokio_stream::StreamExt;
 
-use super::PayloadUtils;
 use super::bistream_manage::{BiStreamManage, BiStreamManageCmd};
+use super::PayloadUtils;
 use super::{api_model::ClientDetectionRequest, nacos_proto::Payload};
 
 type SenderType = tokio::sync::mpsc::Sender<Result<Payload, tonic::Status>>;
@@ -13,13 +13,18 @@ type ReceiverStreamType = tonic::Streaming<Payload>;
 
 pub struct BiStreamConn {
     sender: SenderType,
-    client_id:Arc<String>,
+    client_id: Arc<String>,
     receiver_stream: Cell<Option<ReceiverStreamType>>,
-    manage : Addr<BiStreamManage>,
+    manage: Addr<BiStreamManage>,
 }
 
 impl BiStreamConn {
-    pub fn new(sender: SenderType,client_id:Arc<String> , receiver_stream: ReceiverStreamType,manage : Addr<BiStreamManage>) -> Self {
+    pub fn new(
+        sender: SenderType,
+        client_id: Arc<String>,
+        receiver_stream: ReceiverStreamType,
+        manage: Addr<BiStreamManage>,
+    ) -> Self {
         Self {
             sender,
             client_id,
@@ -32,7 +37,7 @@ impl BiStreamConn {
         if let Some(mut receiver_stream) = self.receiver_stream.replace(None) {
             let manage = self.manage.clone();
             let client_id = self.client_id.clone();
-            async move { 
+            async move {
                 if let Some(item) = receiver_stream.next().await {
                     if let Ok(_payload) = item {
                         //println!("receive frist msg:{}",PayloadUtils::get_payload_string(&payload));
@@ -42,11 +47,10 @@ impl BiStreamConn {
                     if let Ok(payload) = item {
                         //println!("receive msg:{}",PayloadUtils::get_payload_string(&payload));
                         manage.do_send(BiStreamManageCmd::Response(client_id.clone(), payload));
-                    }
-                    else{
+                    } else {
                         break;
                     }
-                } 
+                }
                 manage.do_send(BiStreamManageCmd::ConnClose(client_id));
             }
             .into_actor(self)
@@ -57,16 +61,13 @@ impl BiStreamConn {
         }
     }
 
-    fn send_payload(&mut self, ctx: &mut Context<Self>,payload:Payload){
+    fn send_payload(&mut self, ctx: &mut Context<Self>, payload: Payload) {
         let sender = self.sender.clone();
-        async move {
-            sender.send(Ok(payload)).await
-        }
-        .into_actor(self)
-        .map(|_, _, _| {})
-        .spawn(ctx);
+        async move { sender.send(Ok(payload)).await }
+            .into_actor(self)
+            .map(|_, _, _| {})
+            .spawn(ctx);
     }
-
 }
 
 impl Actor for BiStreamConn {
@@ -102,14 +103,14 @@ impl Handler<BiStreamSenderCmd> for BiStreamConn {
                     "ClientDetectionRequest",
                     serde_json::to_string(&request).unwrap(),
                 );
-                self.send_payload(ctx,payload);
-            },
+                self.send_payload(ctx, payload);
+            }
             BiStreamSenderCmd::Send(payload) => {
-                self.send_payload(ctx,payload.as_ref().to_owned());
-            },
-            BiStreamSenderCmd::Close=> {
+                self.send_payload(ctx, payload.as_ref().to_owned());
+            }
+            BiStreamSenderCmd::Close => {
                 ctx.stop();
-            },
+            }
         }
         Ok(BiStreamSenderResult::None)
     }

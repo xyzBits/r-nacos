@@ -36,16 +36,20 @@ impl BatchInstanceRequestHandler {
 
     pub(crate) fn convert_to_instances(
         request: BatchInstanceRequest,
-        client_id:Arc<String>
+        client_id: Arc<String>,
     ) -> anyhow::Result<Vec<Instance>> {
         let mut list = vec![];
         if request.group_name.is_none() {
             return Err(anyhow::format_err!("groupName is empty!"));
         }
-        let group_name = Arc::new(NamingUtils::default_group(request.group_name.unwrap_or_default()));
+        let group_name = Arc::new(NamingUtils::default_group(
+            request.group_name.unwrap_or_default(),
+        ));
         let service_name = request.service_name.unwrap_or_default();
 
-        let namesapce_id = Arc::new(NamingUtils::default_group(request.namespace.unwrap_or_default()));
+        let namesapce_id = Arc::new(NamingUtils::default_group(
+            request.namespace.unwrap_or_default(),
+        ));
         let input = request.instances;
         if let Some(instances) = input {
             let last_modified_millis = now_millis_i64();
@@ -66,7 +70,9 @@ impl BatchInstanceRequestHandler {
                     enabled: input.enabled,
                     healthy: input.healthy,
                     ephemeral: input.ephemeral,
-                    cluster_name: NamingUtils::default_cluster(input.cluster_name.unwrap_or_default()),
+                    cluster_name: NamingUtils::default_cluster(
+                        input.cluster_name.unwrap_or_default(),
+                    ),
                     service_name: service_name,
                     group_name: group_name.to_owned(),
                     group_service: Default::default(),
@@ -74,8 +80,8 @@ impl BatchInstanceRequestHandler {
                     last_modified_millis: last_modified_millis.to_owned(),
                     namespace_id: namesapce_id.clone(),
                     app_name: "".to_owned(),
-                    from_grpc:true,
-                    client_id:client_id.clone(),
+                    from_grpc: true,
+                    client_id: client_id.clone(),
                 };
                 instance.generate_key();
                 list.push(instance);
@@ -102,13 +108,13 @@ impl PayloadHandler for BatchInstanceRequestHandler {
                 is_de_register = true;
             }
         }
-        let instances = Self::convert_to_instances(request,request_meta.connection_id)?;
+        let instances = Self::convert_to_instances(request, request_meta.connection_id)?;
         let mut response = InstanceResponse::default();
         for instance in instances {
             let cmd = if is_de_register {
                 NamingCmd::Delete(instance)
             } else {
-                let update_tag=InstanceUpdateTag{
+                let update_tag = InstanceUpdateTag {
                     weight: instance.weight != 1.0f32,
                     metadata: true,
                     enabled: !instance.enabled,
